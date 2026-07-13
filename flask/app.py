@@ -46,5 +46,17 @@ def update_student(student_id):
     db.run_query_no_output('UPDATE students SET name = ?, course = ?, score = ? WHERE id = ?', (data["name"], data["course"], data.get("score", 0.0), student_id))
     return jsonify(db.run_query_one('SELECT * FROM students WHERE id = ?', (student_id,))), 200
 
+@app.route("/students/<int:student_id>", methods=["DELETE"])
+def delete_student(student_id):
+    student = db.run_query_one(
+        "SELECT * FROM students WHERE id = ?",
+        (student_id,),
+    )
+    if student is None:
+        return jsonify({"error": "Student not found"}), 404
+    
+    db.run_query_no_output("DELETE FROM students WHERE id = ?", (student_id,))
+    return jsonify({"message" : f'Student {student_id} deleted.'})
+
 if __name__ == "__main__":
     app.run(debug=True)
