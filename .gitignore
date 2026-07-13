@@ -2,3 +2,4 @@
 venv
 practice.db
 practice.csv
+flask/__pycache__/

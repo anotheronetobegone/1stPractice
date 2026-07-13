@@ -106,4 +106,4 @@ def sqlite_filter_above_70() -> None:
 # student = run_query_one("SELECT * FROM students WHERE name = ?", ("Bob",))
 # print(student)
 
-pandas_filter_above_70('practice.csv')
+# pandas_filter_above_70('practice.csv')
