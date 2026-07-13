@@ -29,6 +29,18 @@ def get_student(student_id):
 @app.route("/students", methods=["POST"])
 def create_student():
     data = request.get_json()
+
+    if not data:
+        return jsonify({"error": "data not provided"}), 400
+    
+    name = (data.get("name") or "").strip()
+    course = (data.get("course") or "").strip()
+
+    if not name or not course:
+        return jsonify({"error": "name and course are required"}), 400
+
+    score = data.get("score", 0.0)
+    
     db.run_query_no_output('INSERT INTO students (name, course, score) VALUES (?, ?, ?)',
                            (data["name"], data["course"], data.get("score", 0.0)))
     return jsonify(db.run_query_one('SELECT * FROM students ORDER BY id DESC LIMIT 1')), 201
@@ -56,7 +68,7 @@ def delete_student(student_id):
         return jsonify({"error": "Student not found"}), 404
     
     db.run_query_no_output("DELETE FROM students WHERE id = ?", (student_id,))
-    return jsonify({"message" : f'Student {student_id} deleted.'})
+    return jsonify({"message" : f'Student {student_id} deleted'})
 
 if __name__ == "__main__":
     app.run(debug=True)
