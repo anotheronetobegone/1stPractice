@@ -33,5 +33,18 @@ def create_student():
                            (data["name"], data["course"], data.get("score", 0.0)))
     return jsonify(db.run_query_one('SELECT * FROM students ORDER BY id DESC LIMIT 1')), 201
 
+@app.route("/students/<int:student_id>", methods=["PUT"])
+def update_student(student_id):
+    student = db.run_query_one(
+        "SELECT * FROM students WHERE id = ?",
+        (student_id,),
+    )
+    if student is None:
+        return jsonify({"error": "Student not found"}), 404
+    
+    data = request.get_json()
+    db.run_query_no_output('UPDATE students SET name = ?, course = ?, score = ? WHERE id = ?', (data["name"], data["course"], data.get("score", 0.0), student_id))
+    return jsonify(db.run_query_one('SELECT * FROM students WHERE id = ?', (student_id,))), 200
+
 if __name__ == "__main__":
     app.run(debug=True)
