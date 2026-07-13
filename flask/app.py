@@ -28,32 +28,10 @@ def get_student(student_id):
 
 @app.route("/students", methods=["POST"])
 def create_student():
-    data = request.get_json(silent=True)
-
-    if not isinstance(data, dict):
-        return jsonify({"error": "JSON object required"}), 400
-
-    name = (data.get("name") or "").strip()
-    course = (data.get("course") or "").strip()
-    score = data.get("score", 0.0)
-
-    if not name or not course:
-        return jsonify({"error": "name and course are required"}), 400
-
-    try:
-        score = float(score)
-    except (TypeError, ValueError):
-        return jsonify({"error": "score must be a number"}), 400
-
-    db.run_query_no_output(
-        "INSERT INTO students (name, course, score) VALUES (?, ?, ?)",
-        (name, course, score),
-    )
-
-    new_student = db.run_query_one(
-        "SELECT * FROM students ORDER BY id DESC LIMIT 1"
-    )
-    return jsonify(new_student), 201
+    data = request.get_json()
+    db.run_query_no_output('INSERT INTO students (name, course, score) VALUES (?, ?, ?)',
+                           (data["name"], data["course"], data.get("score", 0.0)))
+    return jsonify(db.run_query_one('SELECT * FROM students ORDER BY id DESC LIMIT 1')), 201
 
 if __name__ == "__main__":
     app.run(debug=True)
