@@ -1,9 +1,33 @@
 from flask import Flask, jsonify, request
 import db
+from flask import Flask, jsonify, request
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
+
 db.init_db()
 
+@app.route("/api/dashboard", methods=["GET", "OPTIONS"])
+def get_dashboard():
+    if request.method == "OPTIONS":
+        return "", 204
+ 
+    return jsonify({
+        "overview": {
+            "average_assessment_score": "78.54",
+            "average_feedback_score": "4.13",
+            "total_attendees": 507,
+            "total_completions": 468,
+            "total_planned_participants": 543,
+            "total_sessions": 20,
+            "total_training_cost": "605000.00"
+        },
+        "monthly_trend": [],
+        "category_breakdown": [],
+        "recent_sessions": [],
+        "status": "ok"
+    })
 
 @app.route("/hello")
 def hello():

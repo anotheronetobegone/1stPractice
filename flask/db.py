@@ -2,7 +2,7 @@ import os
 import sqlite3
 from typing import Optional
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "practice.db")
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "students.db")
 
 
 def run_query(query: str, params: tuple = ()) -> list[dict]:
