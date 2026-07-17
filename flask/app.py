@@ -1,98 +1,109 @@
 from flask import Flask, jsonify, request
+import sqlite3
 import db
-from flask import Flask, jsonify, request
-from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
-
-db.init_db()
-
+ 
+@app.after_request
+def add_cors_headers(response):
+    response.headers.add("Access-Control-Allow-Origin", "http://localhost:3000")
+    response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization")
+    response.headers.add("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS")
+    return response
+ 
+@app.route("/students", methods=["GET"])
+def get_students():
+    conn = sqlite3.connect("students.db")
+    cursor = conn.cursor()
+ 
+    cursor.execute("SELECT * FROM students")
+    students = cursor.fetchall()
+ 
+    conn.close()
+ 
+    return jsonify(students)
+ 
 @app.route("/api/dashboard", methods=["GET", "OPTIONS"])
 def get_dashboard():
     if request.method == "OPTIONS":
         return "", 204
- 
+
+    overview = db.get_overview()
+
     return jsonify({
-        "overview": {
-            "average_assessment_score": "78.54",
-            "average_feedback_score": "4.13",
-            "total_attendees": 507,
-            "total_completions": 468,
-            "total_planned_participants": 543,
-            "total_sessions": 20,
-            "total_training_cost": "605000.00"
-        },
-        "monthly_trend": [],
-        "category_breakdown": [],
-        "recent_sessions": [],
+        "overview": overview,
         "status": "ok"
     })
-
-@app.route("/hello")
-def hello():
-    return "Hello, World!"
-
-
-@app.route("/students", methods=["GET"])
-def get_students():
-    return jsonify(db.run_query("SELECT * FROM students"))
-
-
-@app.route("/students/<int:student_id>", methods=["GET"])
-def get_student(student_id):
-    student = db.run_query_one(
-        "SELECT * FROM students WHERE id = ?",
-        (student_id,),
-    )
-    if student is None:
-        return jsonify({"error": "Student not found"}), 404
-
-    return jsonify(student)
-
+ 
 @app.route("/students", methods=["POST"])
-def create_student():
+def add_student():
+    data = request.get_json()
+ 
+    conn = sqlite3.connect("students.db")
+    cursor = conn.cursor()
+ 
+    cursor.execute(
+        "INSERT INTO students (name, age, course) VALUES (?, ?, ?)",
+        (data["name"], data["age"], data["course"])
+    )
+ 
+    conn.commit()
+    conn.close()
+ 
+    return {"message": "Student added successfully"}, 201
+ 
+@app.route("/students/<int:id>", methods=["GET"])
+def get_student(id):
+    conn = sqlite3.connect("students.db")
+    cursor = conn.cursor()
+ 
+    cursor.execute("SELECT * FROM students WHERE id = ?", (id,))
+    student = cursor.fetchone()
+ 
+    conn.close()
+ 
+    if student:
+        return jsonify(student)
+    else:
+        return jsonify({"message": "Student not found"}), 404
+   
+@app.route("/students/<int:student_id>", methods=["PUT"])
+def update_student(student_id):
     data = request.get_json()
 
     if not data:
         return jsonify({"error": "data not provided"}), 400
-    
-    name = (data.get("name") or "").strip()
-    course = (data.get("course") or "").strip()
 
-    if not name or not course:
-        return jsonify({"error": "name and course are required"}), 400
+    conn = sqlite3.connect("students.db")
+    cursor = conn.cursor()
 
-    score = data.get("score", 0.0)
-    
-    db.run_query_no_output('INSERT INTO students (name, course, score) VALUES (?, ?, ?)',
-                           (data["name"], data["course"], data.get("score", 0.0)))
-    return jsonify(db.run_query_one('SELECT * FROM students ORDER BY id DESC LIMIT 1')), 201
-
-@app.route("/students/<int:student_id>", methods=["PUT"])
-def update_student(student_id):
-    student = db.run_query_one(
-        "SELECT * FROM students WHERE id = ?",
-        (student_id,),
+    cursor.execute(
+        "UPDATE students SET name = ?, age = ?, course = ? WHERE id = ?",
+        (data.get("name"), data.get("age"), data.get("course"), student_id)
     )
-    if student is None:
+
+    conn.commit()
+    conn.close()
+
+    if cursor.rowcount == 0:
         return jsonify({"error": "Student not found"}), 404
-    
-    data = request.get_json()
-    db.run_query_no_output('UPDATE students SET name = ?, course = ?, score = ? WHERE id = ?', (data["name"], data["course"], data.get("score", 0.0), student_id))
-    return jsonify(db.run_query_one('SELECT * FROM students WHERE id = ?', (student_id,))), 200
+
+    return jsonify({"message": f"Student {student_id} updated successfully"}), 200
+
 
 @app.route("/students/<int:student_id>", methods=["DELETE"])
 def delete_student(student_id):
-    student = db.run_query_one(
-        "SELECT * FROM students WHERE id = ?",
-        (student_id,),
-    )
-    if student is None:
+    conn = sqlite3.connect("students.db")
+    cursor = conn.cursor()
+
+    cursor.execute("DELETE FROM students WHERE id = ?", (student_id,))
+    conn.commit()
+    conn.close()
+
+    if cursor.rowcount == 0:
         return jsonify({"error": "Student not found"}), 404
-    
-    db.run_query_no_output("DELETE FROM students WHERE id = ?", (student_id,))
-    return jsonify({"message" : f'Student {student_id} deleted'})
+
+    return jsonify({"message": f"Student {student_id} deleted successfully"}), 200
 
 if __name__ == "__main__":
     app.run(debug=True)
